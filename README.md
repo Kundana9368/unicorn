@@ -38,8 +38,7 @@ By uncovering these insights, my project aims to inform strategic investment dec
 🚀 Join the Conversation:
 Ready to explore the world of unicorns and unlock new opportunities? Let's connect and discuss how these insights can shape your investment strategy, entrepreneurial journey, or simply satisfy your curiosity about the unicorn phenomenon!
 
-🔗 Link to Project:
-[Insert link to project or dashboard here]
+🔗 Link to Project: []
 
 Don't miss out on this exciting journey into the world of unicorns! Connect with me to stay updated on future projects and insightful analyses. Let's navigate the world of innovation together!
 
