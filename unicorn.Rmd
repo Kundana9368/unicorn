@@ -1,0 +1,298 @@
+---
+title: "Unicorn Company Analysis"
+output: html_notebook
+author: Kundana Mandapaka
+---
+
+In business, a unicorn is a startup company valued at over US$1 billion which is privately owned and not listed on a share market. This dataset consists of unicorn companies and startups across the globe as of November 2021, including country of origin, sector, select investors, and valuation of each unicorn.
+
+### Scenario
+You have been hired as a data analyst for a global venture capital firm that specializes in investing in high-potential start-ups. Your manager is interested in understanding the current landscape of unicorn companies to identify emerging trends and investment opportunities.
+
+Using the unicorn dataset provided, your task is to analyze various factors such as the geographical distribution of unicorns, industry sectors with the highest valuations, funding patterns, and key investors. Your goal is to provide insights that can guide the firm’s investment strategy, highlighting regions and industries with the most growth potential and identifying key investors who frequently back successful unicorns. This analysis will help the firm make data-driven decisions on where to allocate their resources for maximum return on investment.
+
+
+### Purpose of the Project
+To provide valuable insights into the dynamic landscape of unicorn companies for a global venture capital firm. The goal is to identify emerging trends, investment opportunities, and key factors contributing to the success of these companies. By analyzing the geography, industry, funding patterns, and key investors, the aim is to guide the firm's investment strategy and optimize resource allocation for maximum returns. The insights will be presented through an interactive dashboard, showcasing the distribution and characteristics of unicorn companies worldwide.
+
+### Data Preperation
+```{r}
+#import libraries
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(lubridate)
+library(skimr)
+library(janitor)
+library(ggplot2)
+```
+
+```{r}
+companies_df <- read.csv("~/Documents/projects/unicorn/Unicorn_Companies.csv")
+```
+
+
+### Data Cleaning
+#### Inspecting the data
+```{r}
+str(companies_df)
+```
+
+```{r}
+summary(companies_df)
+```
+
+
+```{r}
+head(companies_df)
+```
+#### About the data set
+* Data set contains records of 1074 Unicorn Companies from 47 different countries
+* The companies are spread out over 16 different industries
+* Average time taken by a company to be declared as Unicorn in 7 years after founding
+* The Maximum Funding received by a company is 14 Billion USD while the average funding is at 557 Million USD
+
+### Exploratory Analysis
+#### 1. Sector-wise Distribution of Unicorn Companies
+```{r}
+# Calculate the count of unicorn startups by sector
+sector_counts <- table(companies_df$Industry)
+
+# Create a data frame for plotting with sector counts
+plot_data <- data.frame(Industry = names(sector_counts),
+                        count = as.numeric(sector_counts))
+
+# Create a bar chart showing unicorn startups by sector in descending order with data labels
+ggplot(plot_data, aes(x = reorder(Industry, -count), y = count)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  geom_text(aes(label = count), vjust = 1.3, color = "black") +
+  labs(x = "Industry", y = "Count") +
+  theme(panel.background = element_blank(),  # Remove background
+        panel.grid.major = element_blank(),  # Remove major gridlines
+        panel.grid.minor = element_blank(),  # Remove minor gridlines
+        axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust x-axis text
+```
+
+* Fintech and Internet software & services are leading in the number of unicorn companies, with 224 and 205 respectively.
+* These sectors show a substantial lead over traditional industries like Consumer & retail and travel.
+* The dominance of Fintech and Internet software & services underscores their popularity and growth in the unicorn startup space.
+* This trend highlights a clear preference for investment and expansion in these booming sectors over more traditional industries.
+
+#### 2. Global Distribution of Unicorn Companies by Continent
+```{r}
+# Group by continent and count the number of companies
+continent_counts <- companies_df %>%
+  group_by(Continent) %>%
+  summarise(total_companies = n()) %>%
+  arrange(desc(total_companies))  # Arrange in descending order
+
+# Reorder the Continent factor levels based on total companies count
+continent_counts$Continent <- factor(continent_counts$Continent, levels = continent_counts$Continent)
+
+# Create a bar chart showing total companies by continent in descending order
+ggplot(continent_counts, aes(x = Continent, y = total_companies, fill = Continent)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  labs( x = "Continent", y = "Total Companies") +
+  theme(panel.background = element_blank(),  # Remove background
+        panel.grid.major = element_blank(),  # Remove major gridlines
+        panel.grid.minor = element_blank(),  # Remove minor gridlines
+        axis.text.x = element_text(angle = 45, hjust = 1))  # Adjust x-axis text
+```
+* North America leads globally with the most unicorn companies (589), primarily in the United States, notably in Silicon Valley.
+* Asia and Europe also have significant numbers of unicorn companies, driven by tech hubs in countries like China, India, and various European cities.
+* Africa has the fewest unicorn companies among the continents studied, reflecting challenges in its tech ecosystem compared to other regions.
+
+#### 3. Year-wise Summary of Unicorn Company Joinings
+
+```{r}
+
+# Group by Year Joined and count the number of companies
+yearly_counts <- companies_df %>%
+  group_by(Year.Joined) %>%
+  summarise(total_companies = n()) %>%
+  arrange(Year.Joined)  # Arrange by Year_Joined if not already sorted
+
+# Display the yearly counts as a table
+kable(yearly_counts) %>%
+  kable_styling(full_width = FALSE)
+
+```
+### Valuation Analysis
+#### 1. Average market valuation
+```{r}
+average_valuation <- companies_df %>%
+  summarise(avg_valuation = mean(Valuation...B., na.rm = TRUE))
+average_valuation
+```
+#### 2. Average valuation for companies accross each country
+```{r}
+country_summary <- companies_df %>%
+  group_by(Country) %>%
+  summarise(
+    num_companies = n(),
+    avg_country_valuation = mean(Valuation...B., na.rm = TRUE)
+  ) %>%
+  arrange(desc(avg_country_valuation))
+country_summary
+```
+#### 3. Average valuation for companies accross each continent
+```{r}
+# total valuation for all unicorn companies
+total_valuation_all <- sum(companies_df$Valuation...B., na.rm = TRUE)
+
+# total valuation and percentage contribution for each continent
+continent_summary <- companies_df %>%
+  group_by(Continent) %>%
+  summarise(
+    total_valuation = sum(Valuation...B., na.rm = TRUE),
+    pct_contribution = (total_valuation / total_valuation_all) * 100
+  ) %>%
+  arrange(desc(pct_contribution))
+continent_summary
+```
+#### 4. Top 10 cities with the most valued startups in the world
+```{r}
+city_valuation_summary <- companies_df %>%
+  group_by(City) %>%
+  summarise(total_valuation = sum(Valuation...B., na.rm = TRUE)) %>%
+  arrange(desc(total_valuation))  # Arrange in descending order of total valuation
+
+# Select the top 10 cities with the most valued startups
+top_10_cities <- head(city_valuation_summary, 10)
+
+# Reorder cities from highest to lowest total valuation
+top_10_cities$City <- factor(top_10_cities$City, levels = rev(top_10_cities$City))
+
+# Create a horizontal bar chart of the top 15 cities with no grids
+ggplot(top_10_cities, aes(x = reorder(City, total_valuation), y = total_valuation)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  labs(x = "City", y = "Total Valuation ($B)") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  coord_flip()
+```
+
+```{r}
+# Estimate each industry's valuation contribution
+industry_valuation_summary <- companies_df %>%
+  group_by(Industry) %>%
+  summarise(total_valuation = sum(Valuation...B., na.rm = TRUE),
+            pct_contribution = round(total_valuation / sum(companies_df$Valuation...B., na.rm = TRUE) * 100, 1)) %>%
+  arrange(desc(total_valuation)) %>%
+  head(5)  # Select top 5 industries by total valuation contribution
+
+# bubble chart
+ggplot(industry_valuation_summary, aes(x = Industry, y = pct_contribution, size = total_valuation)) +
+  geom_point(color = "blue", alpha = 0.7) +
+  labs(x = "Industry", y = "% Contribution") +
+  scale_size_continuous(name = "Total Valuation ($B)", labels = scales::comma) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(size = 15),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10))
+
+```
+##### Overall Valuation:
+* The overall average Unicorn company valuation is about $3.455B
+
+##### Valuation by country:
+* The best performer here is Bahamas. It has one unicorn company FTX which is valued at $32B.
+* Sweden is the next in line with an average valuation of $10.5B across its 6 unicorn companies. These are the only 2 countries that crossed the $10B mark in terms of average valuation.
+* Croatia, Italy, and Czech Republic all come last on this list with an average unicorn valuation of $1B.
+
+##### Valuation across Continents:
+* North America, with $2.032 Trillion contributes ~54.75% of total valuation
+* Asia, with $1.067 Trillion contributes ~28.75%
+* Europe, with $503 Billion contributes ~13.55%
+* Oceania, with $56 Billion contributes ~1.5%
+* South America, with $48 Billion contributes ~ 1.29%
+* Africa, with $5 Billion contributes ~0.13%
+
+### Investor Analysis
+#### 1. Average Valuation of Unicorn Companies by Number of Investors
+```{r}
+avg_valuation_vs_investors <- companies_df %>%
+  mutate(count_investors = str_count(Investors, "\\,") + 1) %>%  # Count number of investors
+  group_by(count_investors) %>%
+  summarise(average_valuation = mean(`Valuation...B.`, na.rm = TRUE)) %>%
+  ungroup()
+
+# Create a bar chart to show average valuation by number of investors
+ggplot(avg_valuation_vs_investors, aes(x = factor(count_investors), y = average_valuation)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  scale_x_discrete(name = "Number of Investors") +
+  scale_y_continuous(name = "Average Valuation ($B)", labels = scales::comma) +
+  theme_minimal() +
+  theme(axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+```
+* Companies with 4 investors showed the highest average valuation, indicating a strong correlation between the number of investors and high company valuations.
+* Following closely, companies with 3 investors displayed the second-highest average valuation, suggesting a notable impact on valuation even with slightly fewer investors.
+* Surprisingly, companies with only 1 investor ranked third in average valuation. This suggests that individual investors can significantly influence a company’s valuation under certain conditions.
+* Companies with 2 investors had the lowest average valuation among the groups analyzed, highlighting the need for further investigation into potential factors influencing their lower valuations.
+
+#### 2. Average correlation between Number of Investors and Average Valuation
+```{r}
+avg_valuation_vs_investors <- companies_df %>%
+  mutate(count_investors = str_count(Investors, "\\,") + 1) %>%  # Count number of investors
+  group_by(count_investors) %>%
+  summarise(average_valuation = mean(`Valuation...B.`, na.rm = TRUE)) %>%
+  ungroup()
+
+# Calculate correlation between number of investors and average valuation
+correlation <- cor(avg_valuation_vs_investors$count_investors, avg_valuation_vs_investors$average_valuation)
+cat(correlation, "\n")
+```
+#### 3. Top 5 Investors and the number of companies they have invested in
+```{r}
+# Trim whitespace around Investors column
+companies_df$Investors <- stringr::str_trim(companies_df$Investors)
+
+# Count the number of companies each investor group is funding
+investors_summary <- companies_df %>%
+  separate_rows(Investors, sep = ",\\s*") %>%  # Separate multiple investors into rows
+  mutate(Investors = stringr::str_trim(Investors)) %>%
+  group_by(Investors) %>%
+  summarise(total_companies = n_distinct(Company)) %>%
+  arrange(desc(total_companies)) %>%
+  head(5)
+print(investors_summary)
+```
+#### 4. Further analysis can be conducted to understand the nature of investments each investor. Analyzing Accel.
+```{r}
+accel_investments <- companies_df %>%
+  filter(grepl("Accel", Investors, ignore.case = TRUE))
+
+# Summarize the number of companies Accel has invested in each industry
+accel_industry_summary <- accel_investments %>%
+  group_by(Industry) %>%
+  summarise(total_companies = n()) %>%
+  arrange(desc(total_companies))
+print(accel_industry_summary)
+```
+### Conclusion
+1. Industry Dynamics:
+  * Fintech is the leading sector with the most unicorn companies, showing a strong trend towards tech-driven investments.
+  * Traditional industries have fewer unicorns, highlighting a focus on innovation.
+2. Geographic Trends:
+  * North America has the highest number of unicorns, driven by strong tech ecosystems.
+  * Asia and Europe follow, showing a global spread of high-value startups.
+  * Africa has fewer unicorns but is showing growth.
+3. Valuation Analysis:
+  * The average valuation of a unicorn company is around $3.45 billion.
+  * Countries like the Bahamas and Sweden have the highest average valuations.
+4. Investor Influence:
+  * There is a strong positive correlation (0.78) between the number of investors and a company's valuation.
+  * Companies with 4 investors have the highest average valuations, while those with 2 investors have the lowest.
+
+### Recommendations
+1. Industry Focus: Invest in the Fintech sector, which shows high growth and valuation potential.
+2. Geographical Considerations: Target investments in regions with strong tech ecosystems, such as North America and Asia.
+3. Investor Insights: Study the investment strategies of top investors like Accel, Andreessen Horowitz, and Tiger Global Management for better investment decisions.
+
+By focusing on high-growth sectors, strategic locations, and understanding the impact of investor involvement, your company can make informed investment decisions and potentially identify future unicorns.
